@@ -1,0 +1,62 @@
+# SuperBizAgent 核心配置文件 (显式层级结构)
+
+server:
+  app_name: "SuperBizAgent"
+  app_version: "1.2.1"
+  debug: ${DEBUG:true}
+  host: ${HOST:0.0.0.0}
+  port: ${PORT:9900}
+
+database:
+  postgres:
+    host: ${POSTGRES_HOST:localhost}
+    port: ${POSTGRES_PORT:5432}
+    db: ${POSTGRES_DB:super_biz_agent}
+    user: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:super_biz_password}
+    pool_min_size: ${POSTGRES_POOL_MIN_SIZE:2}
+    pool_max_size: ${POSTGRES_POOL_MAX_SIZE:10}
+
+models:
+  # 通用对话与推理 LLM 模型配置 (兼容任意 base_url + api_key 的 OpenAI 协议提供商)
+  # 支持例如: OpenAI, DeepSeek, Moonshot(Kimi), 智谱GLM, 硅基流动, 本地 Ollama, vLLM, 通义千问等
+  llm:
+    provider: ${LLM_PROVIDER:openai}
+    base_url: ${LLM_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    api_key: "${LLM_API_KEY:}"
+    model: ${LLM_MODEL:qwen-max}
+    temperature: ${LLM_TEMPERATURE:0.7}
+    max_tokens: ${LLM_MAX_TOKENS:4096}
+
+  # 阿里云百炼服务专属配置 (保留用于向量化 Embedding 与重排序 Rerank)
+  dashscope:
+    api_key: "${DASHSCOPE_API_KEY:}"
+    api_base: ${DASHSCOPE_API_BASE:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    embedding_base_url: ${DASHSCOPE_EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    chat_model: ${DASHSCOPE_MODEL:qwen-max}
+    embedding_model: ${DASHSCOPE_EMBEDDING_MODEL:text-embedding-v4}
+
+rag:
+  model: ${RAG_MODEL:qwen-max}
+  retrieval:
+    dense_top_k: ${RAG_DENSE_TOP_K:10}
+    sparse_top_k: ${RAG_SPARSE_TOP_K:10}
+    rrf_top_k: ${RAG_RRF_TOP_K:10}
+    final_top_k: ${RAG_FINAL_TOP_K:3}
+  rerank:
+    enabled: ${RAG_RERANK_ENABLED:true}
+    model: ${RAG_RERANK_MODEL:gte-rerank}
+    threshold: ${RAG_RERANK_THRESHOLD:0.45}
+    base_url: ${RAG_RERANK_BASE_URL:https://dashscope.aliyuncs.com}
+  chunking:
+    max_size: ${CHUNK_MAX_SIZE:800}
+    overlap: ${CHUNK_OVERLAP:100}
+
+mcp_servers:
+  cls:
+    transport: ${MCP_CLS_TRANSPORT:streamable-http}
+    url: ${MCP_CLS_URL:http://localhost:8003/mcp}
+  monitor:
+    transport: ${MCP_MONITOR_TRANSPORT:streamable-http}
+    url: ${MCP_MONITOR_URL:http://localhost:8004/mcp}
+

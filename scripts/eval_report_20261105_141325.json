@@ -1,0 +1,58 @@
+[
+  {
+    "case": "监控数据源为 mock (根因)",
+    "passed": true,
+    "detail": "monitor_server.query_cpu_metrics 两次调用结果相同=False; mock 峰值=97.9%, 系统真实 CPU=1.8%。该函数为随机/脚本化造数，与真实系统无关",
+    "latency_s": null,
+    "severity": "warn"
+  },
+  {
+    "case": "CPU 数据真实性",
+    "passed": false,
+    "detail": "回答中无百分比: 97.0",
+    "latency_s": 6.683798551559448,
+    "severity": "fail"
+  },
+  {
+    "case": "内存数据真实性",
+    "passed": false,
+    "detail": "回答中无百分比: 85.5",
+    "latency_s": 3.2447116374969482,
+    "severity": "fail"
+  },
+  {
+    "case": "RAG 知识库问答 (已索引文档)",
+    "passed": true,
+    "detail": "关键点命中 ['步骤', '进程', '日志'] (3/3), 回答长度 752",
+    "latency_s": 22.02070641517639,
+    "severity": "fail"
+  },
+  {
+    "case": "RAG 负例 (不编造知识库内容)",
+    "passed": true,
+    "detail": "回答是否声明知识库无此内容: True; 回答: 对不起，知识库中没有找到关于员工请假审批流程的具体信息。可能公司内部的请假流程文档还未被收录，或者相关信息比较新近未及时更新至知识库。建议您可以直接咨询人事部门或查阅最新的员工手册获取最准确的信息。如果方便的话，您也可以将相关资料提供给我，",
+    "latency_s": 10.042176246643066,
+    "severity": "warn"
+  },
+  {
+    "case": "时间工具准确性",
+    "passed": true,
+    "detail": "Agent 回答 14:12 vs 系统时间 14:12 (偏差 0 分钟)",
+    "latency_s": 3.507768392562866,
+    "severity": "fail"
+  },
+  {
+    "case": "多轮会话记忆 (指代追问)",
+    "passed": true,
+    "detail": "追问回答: 当前时间是2026年11月5日 14:13:20（北京时间，时区为Asia/Shanghai）。\n\n获取这个时间点后，您可以根据实际情况设定一个合理的时间范围来查询相关的系统日志和应用日志。例如，您可以选择查询从当前时间往前30分钟的日志，",
+    "latency_s": 26.643371105194092,
+    "severity": "fail"
+  },
+  {
+    "case": "流式接口 SSE 协议完整性",
+    "passed": true,
+    "detail": "content 事件 11 个, done 事件 1 个, error 0 个, 拼接文本 81 字",
+    "latency_s": 1.5511305332183838,
+    "severity": "fail"
+  }
+]

@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: super-biz-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: super_biz_agent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: super_biz_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./volumes/postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d super_biz_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
