@@ -56,7 +56,17 @@ mcp_servers:
   cls:
     transport: ${MCP_CLS_TRANSPORT:streamable-http}
     url: ${MCP_CLS_URL:http://localhost:8003/mcp}
-  monitor:
-    transport: ${MCP_MONITOR_TRANSPORT:streamable-http}
-    url: ${MCP_MONITOR_URL:http://localhost:8004/mcp}
+  # monitor MCP 服务返回的是随机 mock 数据，已由本地 Prometheus 监控工具层
+  # (app/services/monitoring/ + app/tools/monitoring_tools.py) 取代，故停用。
+  # monitor:
+  #   transport: ${MCP_MONITOR_TRANSPORT:streamable-http}
+  #   url: ${MCP_MONITOR_URL:http://localhost:8004/mcp}
+
+monitoring:
+  prometheus:
+    url: ${PROMETHEUS_URL:http://localhost:9090}
+    timeout_seconds: ${PROMETHEUS_TIMEOUT:5.0}
+    max_range_hours: ${PROMETHEUS_MAX_RANGE_HOURS:24}
+    max_series: ${PROMETHEUS_MAX_SERIES:50}
+    max_points_per_series: ${PROMETHEUS_MAX_POINTS:300}
 

@@ -8,7 +8,6 @@ SERVER_URL = http://localhost:9900
 UPLOAD_API = $(SERVER_URL)/api/upload
 HEALTH_CHECK_API = $(SERVER_URL)/health
 DOCS_DIR = aiops-docs
-MILVUS_CONTAINER = milvus-standalone
 
 # 颜色输出
 GREEN = \033[0;32m
@@ -17,11 +16,11 @@ RED = \033[0;31m
 CYAN = \033[0;36m
 NC = \033[0m
 
-.PHONY: help init start stop restart check upload clean up down status wait \
+.PHONY: help init start stop restart check upload clean status wait \
         install install-dev dev run test test-quick format lint fix type-check \
         security pre-commit-install pre-commit check-all coverage docs shell \
         ipython watch add add-dev remove list-docs test-upload sync logs \
-        start-cls stop-cls start-monitor stop-monitor start-api stop-api status-mcp
+        start-cls stop-cls start-api stop-api status-mcp
 
 # ============================================================
 # 默认目标：显示帮助信息
@@ -35,9 +34,7 @@ help:
 	@echo "  $(YELLOW)make init$(NC)         - 🚀 一键初始化（Docker → 服务 → 上传文档）"
 	@echo ""
 	@echo "$(CYAN)【Docker 管理】$(NC)"
-	@echo "  $(YELLOW)make up$(NC)           - 🐳 启动 Milvus 容器"
-	@echo "  $(YELLOW)make down$(NC)         - 🛑 停止 Milvus 容器"
-	@echo "  $(YELLOW)make status$(NC)       - 📊 查看容器状态"
+	@echo "  $(YELLOW)make status$(NC)       - 📊 查看数据库/监控容器状态"
 	@echo ""
 	@echo "$(CYAN)【服务管理】$(NC)"
 	@echo "  $(YELLOW)make start$(NC)        - 🚀 启动所有服务（MCP + FastAPI）"
@@ -49,8 +46,6 @@ help:
 	@echo "$(CYAN)【MCP 服务管理】$(NC)"
 	@echo "  $(YELLOW)make start-cls$(NC)     - 📋 启动 CLS MCP 服务"
 	@echo "  $(YELLOW)make stop-cls$(NC)      - 🛑 停止 CLS MCP 服务"
-	@echo "  $(YELLOW)make start-monitor$(NC) - 📊 启动 Monitor MCP 服务"
-	@echo "  $(YELLOW)make stop-monitor$(NC)  - 🛑 停止 Monitor MCP 服务"
 	@echo "  $(YELLOW)make start-api$(NC)     - 🚀 启动 FastAPI 服务"
 	@echo "  $(YELLOW)make stop-api$(NC)      - 🛑 停止 FastAPI 服务"
 	@echo ""
@@ -98,16 +93,13 @@ init:
 	@echo "$(GREEN)🚀 开始一键初始化 SuperBizAgent...$(NC)"
 	@echo "$(GREEN)═══════════════════════════════════════════════════════$(NC)"
 	@echo ""
-	@echo "$(YELLOW)步骤 1/4: 启动 Docker 容器（Milvus 向量数据库）$(NC)"
-	@$(MAKE) up
-	@echo ""
-	@echo "$(YELLOW)步骤 2/4: 启动 FastAPI 服务$(NC)"
+	@echo "$(YELLOW)步骤 1/3: 启动服务（MCP + FastAPI；需先运行 PostgreSQL 与 Prometheus 容器）$(NC)"
 	@$(MAKE) start
 	@echo ""
-	@echo "$(YELLOW)步骤 3/4: 等待服务就绪$(NC)"
+	@echo "$(YELLOW)步骤 2/3: 等待服务就绪$(NC)"
 	@$(MAKE) wait
 	@echo ""
-	@echo "$(YELLOW)步骤 4/4: 上传文档到向量数据库$(NC)"
+	@echo "$(YELLOW)步骤 3/3: 上传文档到向量数据库$(NC)"
 	@$(MAKE) upload
 	@echo ""
 	@echo "$(GREEN)═══════════════════════════════════════════════════════$(NC)"
@@ -117,73 +109,20 @@ init:
 	@echo "$(GREEN)🌐 服务访问地址:$(NC)"
 	@echo "   API 服务: $(SERVER_URL)"
 	@echo "   API 文档: $(SERVER_URL)/docs"
-	@echo "   Attu (Milvus Web UI): http://localhost:8000"
-	@echo "   MinIO: http://localhost:9001 (admin/minioadmin)"
+	@echo "   Prometheus: http://localhost:9090"
 	@echo ""
 	@echo "$(YELLOW)💡 提示: 服务正在后台运行$(NC)"
-	@echo "   查看日志: $(YELLOW)tail -f server.log$(NC)"
+	@echo "   查看日志: $(YELLOW)tail -f api.log$(NC)"
 	@echo "   停止服务: $(YELLOW)make stop$(NC)"
 
 # ============================================================
 # Docker 管理
 # ============================================================
 
-# 启动 Docker 容器（使用 docker compose）
-up:
-	@echo "$(YELLOW)🐳 检查 Docker 容器状态...$(NC)"
-	@if ! docker info > /dev/null 2>&1; then \
-		echo "$(YELLOW)⚠️  Docker 未运行，尝试启动 Colima...$(NC)"; \
-		colima start 2>/dev/null || (echo "$(RED)❌ 无法启动 Docker，请手动启动$(NC)" && exit 1); \
-		sleep 3; \
-	fi
-	@if docker ps --format '{{.Names}}' | grep -q "^$(MILVUS_CONTAINER)$$"; then \
-		echo "$(GREEN)✅ Milvus 容器已经在运行中$(NC)"; \
-		docker ps --filter "name=milvus" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -10; \
-	else \
-		echo "$(YELLOW)🚀 启动 Milvus 相关容器...$(NC)"; \
-		docker compose -f vector-database.yml up -d; \
-		echo "$(YELLOW)⏳ 等待容器启动...$(NC)"; \
-		sleep 5; \
-		if docker ps --format '{{.Names}}' | grep -q "^$(MILVUS_CONTAINER)$$"; then \
-			echo "$(GREEN)✅ Docker 容器启动成功！$(NC)"; \
-			echo ""; \
-			echo "$(GREEN)📋 运行中的容器:$(NC)"; \
-			docker ps --filter "name=milvus" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | head -10; \
-			echo ""; \
-			echo "$(GREEN)🌐 服务访问地址:$(NC)"; \
-			echo "   Milvus: localhost:19530"; \
-			echo "   Attu (Web UI): http://localhost:8000"; \
-			echo "   MinIO: http://localhost:9001 (admin/minioadmin)"; \
-		else \
-			echo "$(RED)❌ 容器启动失败$(NC)"; \
-			exit 1; \
-		fi; \
-	fi
-
-# 停止 Docker 容器
-down:
-	@echo "$(YELLOW)🛑 停止 Docker 容器...$(NC)"
-	@if docker ps --format '{{.Names}}' | grep -q "milvus"; then \
-		docker compose -f vector-database.yml down; \
-		echo "$(GREEN)✅ Docker 容器已停止$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠️  没有运行中的 Milvus 容器$(NC)"; \
-	fi
-
-# 查看容器状态
+# 查看数据库与监控容器状态
 status:
-	@echo "$(YELLOW)📊 Docker 容器状态:$(NC)"
-	@echo ""
-	@if docker ps -a --format '{{.Names}}' | grep -q "milvus"; then \
-		docker ps -a --filter "name=milvus" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"; \
-		echo ""; \
-		running=$$(docker ps --filter "name=milvus" --format '{{.Names}}' | wc -l | tr -d ' '); \
-		total=$$(docker ps -a --filter "name=milvus" --format '{{.Names}}' | wc -l | tr -d ' '); \
-		echo "$(GREEN)运行中: $$running / $$total$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠️  没有找到 Milvus 相关容器$(NC)"; \
-		echo "$(YELLOW)提示: 请先创建 Milvus 容器$(NC)"; \
-	fi
+	@echo "$(YELLOW)📊 容器状态:$(NC)"
+	@docker ps -a --filter "name=super-biz-postgres" --filter "name=super-biz-prometheus" --filter "name=node_exporter" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # ============================================================
 # MCP 服务管理
@@ -210,45 +149,11 @@ start-cls:
 		fi; \
 	fi
 
-# 启动 Monitor MCP 服务
-start-monitor:
-	@echo "$(YELLOW)📊 启动 Monitor MCP 服务...$(NC)"
-	@if pgrep -f "mcp_servers/monitor_server.py" > /dev/null 2>&1; then \
-		echo "$(GREEN)✅ Monitor MCP 服务已经在运行中$(NC)"; \
-	else \
-		echo "$(YELLOW)📦 正在启动 Monitor MCP 服务（后台运行）...$(NC)"; \
-		nohup .venv/bin/python mcp_servers/monitor_server.py > mcp_monitor.log 2>&1 & \
-		echo $$! > mcp_monitor.pid; \
-		sleep 2; \
-		if pgrep -f "mcp_servers/monitor_server.py" > /dev/null 2>&1; then \
-			echo "$(GREEN)✅ Monitor MCP 服务启动成功$(NC)"; \
-			echo "$(YELLOW)   PID: $$(cat mcp_monitor.pid)$(NC)"; \
-			echo "$(YELLOW)   URL: http://127.0.0.1:8004/mcp$(NC)"; \
-			echo "$(YELLOW)   日志: mcp_monitor.log$(NC)"; \
-		else \
-			echo "$(RED)❌ Monitor MCP 服务启动失败$(NC)"; \
-			echo "$(YELLOW)请检查日志: tail -f mcp_monitor.log$(NC)"; \
-		fi; \
-	fi
-
-# 停止 Monitor MCP 服务
+# 停止 Monitor MCP 服务（mock 数据源，已停用；保留命令仅供清理旧进程）
 stop-monitor:
-	@echo "$(YELLOW)🛑 停止 Monitor MCP 服务...$(NC)"
-	@if [ -f mcp_monitor.pid ]; then \
-		pid=$$(cat mcp_monitor.pid); \
-		if ps -p $$pid > /dev/null 2>&1; then \
-			kill $$pid; \
-			echo "$(GREEN)✅ Monitor MCP 服务已停止 (PID: $$pid)$(NC)"; \
-		else \
-			echo "$(YELLOW)⚠️  进程不存在 (PID: $$pid)$(NC)"; \
-		fi; \
-		rm -f mcp_monitor.pid; \
-	else \
-		echo "$(YELLOW)⚠️  未找到 mcp_monitor.pid 文件$(NC)"; \
-		pkill -f "mcp_servers/monitor_server.py" 2>/dev/null && \
-			echo "$(GREEN)✅ 已停止所有 Monitor MCP 进程$(NC)" || \
-			echo "$(YELLOW)⚠️  没有运行中的 Monitor MCP 进程$(NC)"; \
-	fi
+	@pkill -f "mcp_servers/monitor_server.py" 2>/dev/null && \
+		echo "$(GREEN)✅ 已停止所有 Monitor MCP 进程$(NC)" || \
+		echo "$(YELLOW)⚠️  没有运行中的 Monitor MCP 进程$(NC)"
 
 # 检查 MCP 服务状态
 status-mcp:
@@ -268,17 +173,7 @@ status-mcp:
 	fi
 	@echo ""
 	@echo "$(CYAN)Monitor MCP 服务:$(NC)"
-	@if pgrep -f "mcp_servers/monitor_server.py" > /dev/null 2>&1; then \
-		pid=$$(pgrep -f "mcp_servers/monitor_server.py"); \
-		echo "  状态: $(GREEN)运行中$(NC)"; \
-		echo "  PID: $$pid"; \
-		echo "  URL: http://127.0.0.1:8004/mcp"; \
-		curl -s http://127.0.0.1:8004/mcp > /dev/null 2>&1 && \
-			echo "  连接: $(GREEN)✅ 正常$(NC)" || \
-			echo "  连接: $(RED)❌ 无法连接$(NC)"; \
-	else \
-		echo "  状态: $(RED)未运行$(NC)"; \
-	fi
+	@echo "  状态: $(YELLOW)已停用（mock 数据源，监控能力由本地 Prometheus 工具层提供）$(NC)"
 	@echo ""
 	@echo "$(CYAN)Math MCP 服务:$(NC)"
 	@echo "  状态: $(YELLOW)已移除（示例服务）$(NC)"
@@ -294,9 +189,6 @@ start:
 	@echo "$(GREEN)═══════════════════════════════════════════════════════$(NC)"
 	@echo ""
 	@$(MAKE) start-cls
-	@sleep 1
-	@echo ""
-	@$(MAKE) start-monitor
 	@sleep 1
 	@echo ""
 	@$(MAKE) start-api
@@ -329,8 +221,6 @@ stop:
 	@$(MAKE) stop-api
 	@echo ""
 	@$(MAKE) stop-cls
-	@echo ""
-	@$(MAKE) stop-monitor
 	@echo ""
 	@echo "$(GREEN)═══════════════════════════════════════════════════════$(NC)"
 	@echo "$(GREEN)✅ 所有服务已停止！$(NC)"

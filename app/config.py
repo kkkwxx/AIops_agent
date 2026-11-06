@@ -128,6 +128,18 @@ class MCPServerItem(BaseModel):
     url: str = ""
 
 
+class PrometheusConfig(BaseModel):
+    url: str = "http://localhost:9090"
+    timeout_seconds: float = 5.0
+    max_range_hours: int = 24
+    max_series: int = 50
+    max_points_per_series: int = 300
+
+
+class MonitoringConfig(BaseModel):
+    prometheus: PrometheusConfig = Field(default_factory=PrometheusConfig)
+
+
 # ============================================================
 # 2. 根配置对象（所见即所得，清晰分层）
 # ============================================================
@@ -138,6 +150,7 @@ class AppConfig(BaseModel):
     models: ModelsConfig = Field(default_factory=ModelsConfig)
     rag: RAGConfig = Field(default_factory=RAGConfig)
     mcp_servers: Dict[str, MCPServerItem] = Field(default_factory=dict)
+    monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
 
 
 def load_config(config_path: str = "config.yaml") -> AppConfig:

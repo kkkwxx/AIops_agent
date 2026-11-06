@@ -20,7 +20,7 @@ from typing_extensions import TypedDict
 from app.config import config
 from app.core.postgres_client import postgres_manager
 from app.core.llm_factory import llm_factory
-from app.tools import get_current_time, retrieve_knowledge
+from app.tools import LOCAL_TOOLS, get_current_time, retrieve_knowledge
 from app.agent.mcp_client import get_mcp_client_with_retry
 
 # 阿里千问大模型和langchain集成参考： https://docs.langchain.com/oss/python/integrations/chat/qwen
@@ -91,8 +91,8 @@ class RagAgentService:
         )
         self.model_name = getattr(self.model, "model_name", config.models.llm.model)
 
-        # 定义基础工具
-        self.tools = [retrieve_knowledge, get_current_time]
+        # 定义基础工具（包含本地知识库检索、时间工具与受控监控工具包）
+        self.tools = list(LOCAL_TOOLS)
 
         # MCP 客户端（延迟初始化，使用全局管理）
         self.mcp_tools: list = []

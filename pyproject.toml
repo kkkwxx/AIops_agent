@@ -167,7 +167,7 @@ strict_equality = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["dashscope.*", "langchain.*", "pymilvus.*"]
+module = ["dashscope.*", "langchain.*"]
 ignore_missing_imports = true
 
 [tool.bandit]

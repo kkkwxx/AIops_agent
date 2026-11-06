@@ -97,40 +97,25 @@ notepad .env
 # 4. 启动 Docker Desktop
 # 确保 Docker Desktop 已安装并正在运行
 
-# 5. 启动 Milvus 向量数据库（Docker Compose）
-docker compose -f vector-database.yml up -d
+# 5. 启动依赖容器（PostgreSQL pgvector 与 Prometheus）
+docker run -d --name super-biz-postgres -p 5432:5432 -e POSTGRES_PASSWORD=<.env 中的密码> -e POSTGRES_DB=super_biz_agent pgvector/pgvector:pg16
+docker run -d --name super-biz-prometheus -v deploy/prometheus.yml:/etc/prometheus/prometheus.yml --network host prom/prometheus:v2.28.1
 
-# 6. 等待 Milvus 启动完成（约 5-10 秒）
-timeout /t 10
-
-# 7. 启动 MCP 服务
+# 6. 启动 MCP 服务
 # 启动 CLS 日志查询服务（新开一个 PowerShell 窗口）
 python mcp_servers/cls_server.py
 
-# 启动 Monitor 监控服务（新开一个 PowerShell 窗口）
-python mcp_servers/monitor_server.py
-
-# 8. 启动 FastAPI 主服务（新开一个 PowerShell 窗口）
+# 7. 启动 FastAPI 主服务（新开一个 PowerShell 窗口）
 # 注意：日志会自动输出到 logs\app_YYYY-MM-DD.log
 python -m uvicorn app.main:app --host 0.0.0.0 --port 9900
 
-# 9. 上传文档到向量库（新开一个 PowerShell 窗口）
+# 8. 上传文档到向量库（新开一个 PowerShell 窗口）
 # 等待服务启动完成后执行
 timeout /t 5
 python -c "import requests, os, time; [requests.post('http://localhost:9900/api/upload', files={'file': open(f'aiops-docs/{f}', 'rb')}) or time.sleep(1) for f in os.listdir('aiops-docs') if f.endswith('.md')]"
 ```
 
-**Windows 一键启动脚本**（推荐）
-
-使用启动脚本：
-
-```powershell
-# 启动所有服务
-.\start-windows.bat
-
-# 停止所有服务
-.\stop-windows.bat
-```
+> 说明：旧版 `start-windows.bat` / `stop-windows.bat` 已移除，Windows 环境请按上述步骤依次启动；Linux/macOS 可直接使用 `make start`。
 
 ### 访问服务
 - **Web 界面**: http://localhost:9900
@@ -214,8 +199,7 @@ super_biz_agent_py/
 │   │   └── time_tool.py                    # 时间工具
 │   ├── core/                               # 核心组件
 │   │   ├── __init__.py
-│   │   ├── llm_factory.py                  # LLM 工厂（模型管理）
-│   │   └── milvus_client.py                # Milvus 客户端
+│   │   └── llm_factory.py                  # LLM 工厂（模型管理）
 │   └── utils/                              # 工具类
 │       ├── __init__.py
 │       └── logger.py                       # 日志配置（Loguru）
@@ -231,12 +215,10 @@ super_biz_agent_py/
 ├── logs/                                   # 日志目录（Loguru 自动创建）
 │   └── app_YYYY-MM-DD.log                  # 按天轮转的日志文件
 ├── uploads/                                # 上传文件临时目录
-├── volumes/                                # Milvus 数据持久化目录
+├── volumes/                                # PostgreSQL 数据持久化目录（不入库）
+├── deploy/                                 # 部署配置（Prometheus 等）
 ├── .env                                    # 环境变量配置（需手动创建）
 ├── Makefile                                # 项目管理命令（Linux/macOS）
-├── start-windows.bat                       # Windows 启动脚本
-├── stop-windows.bat                        # Windows 停止脚本
-├── vector-database.yml                     # Milvus Docker Compose 配置
 ├── pyproject.toml                          # 项目配置（依赖、元数据）
 ├── uv.lock                                 # uv 依赖锁定文件
 ├── pyrightconfig.json                      # Pyright 类型检查配置
@@ -253,10 +235,6 @@ super_biz_agent_py/
 DASHSCOPE_API_KEY=your-api-key （配置你自己的秘钥）
 DASHSCOPE_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1  # 不配置则默认会使用新加坡站点
 DASHSCOPE_MODEL=qwen-max
-
-# Milvus 配置
-MILVUS_HOST=localhost
-MILVUS_PORT=19530
 
 # RAG 配置
 RAG_TOP_K=3
@@ -327,24 +305,13 @@ make lint              # 代码检查
 ### Windows 环境问题
 
 #### 1. `make` 命令不可用
-Windows 不支持 `make` 命令，请使用提供的批处理脚本：
-```powershell
-# 启动服务
-.\start-windows.bat
-
-# 停止服务
-.\stop-windows.bat
-```
+Windows 不支持 `make` 命令，请按"快速开始"中的 Windows 手动步骤依次启动各服务（旧版批处理脚本已移除）。
 
 #### 2. PowerShell 执行策略限制
 如果遇到 "无法加载文件，因为在此系统上禁止运行脚本" 错误：
 ```powershell
 # 临时允许脚本执行（管理员权限）
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-
-# 或者使用 CMD 而不是 PowerShell
-cmd
-.\start-windows.bat
 ```
 
 #### 3. 端口被占用（Windows）
@@ -365,18 +332,15 @@ cat .env | grep DASHSCOPE_API_KEY    # Linux/macOS
 type .env | findstr DASHSCOPE_API_KEY  # Windows
 ```
 
-### Milvus 连接失败
+### 数据库 / 监控容器连接失败
 ```bash
 # 确保本机有 Docker 服务并且已经启动（可以使用 Docker Desktop）
 
-# 检查 Milvus 状态
-docker ps | grep milvus
+# 检查容器状态
+make status
 
-# 重启 Milvus（使用 docker compose）
-docker compose -f vector-database.yml restart
-
-# 或者重启单个服务
-docker compose -f vector-database.yml restart standalone
+# 重启 PostgreSQL / Prometheus 容器
+docker restart super-biz-postgres super-biz-prometheus
 ```
 
 ### 服务无法启动

@@ -10,7 +10,7 @@ from loguru import logger
 
 from app.config import config
 from app.core.llm_factory import llm_factory
-from app.tools import get_current_time, retrieve_knowledge
+from app.tools import LOCAL_TOOLS
 from app.agent.mcp_client import get_mcp_client_with_retry
 from .state import PlanExecuteState
 
@@ -35,11 +35,8 @@ async def executor(state: PlanExecuteState) -> Dict[str, Any]:
     logger.info(f"当前任务: {task}")
 
     try:
-        # 获取本地工具
-        local_tools = [
-            get_current_time,
-            retrieve_knowledge
-        ]
+        # 获取本地工具集合
+        local_tools = list(LOCAL_TOOLS)
 
         # 获取 MCP 工具
         mcp_client = await get_mcp_client_with_retry()

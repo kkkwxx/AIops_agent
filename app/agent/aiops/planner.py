@@ -11,7 +11,7 @@ from loguru import logger
 
 from app.config import config
 from app.core.llm_factory import llm_factory
-from app.tools import get_current_time, retrieve_knowledge
+from app.tools import LOCAL_TOOLS, retrieve_knowledge
 from app.agent.mcp_client import get_mcp_client_with_retry
 from .state import PlanExecuteState
 from .utils import format_tools_description
@@ -91,10 +91,7 @@ async def planner(state: PlanExecuteState) -> Dict[str, Any]:
 
         # 步骤2: 获取可用工具列表
         # 获取本地工具
-        local_tools = [
-            get_current_time,
-            retrieve_knowledge
-        ]
+        local_tools = list(LOCAL_TOOLS)
 
         # 获取 MCP 工具
         mcp_client = await get_mcp_client_with_retry()

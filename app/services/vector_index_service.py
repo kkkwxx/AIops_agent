@@ -57,7 +57,7 @@ class IndexingResult:
 
 
 class VectorIndexService:
-    """向量索引服务 - 负责读取文件、生成向量、存储到 Milvus"""
+    """向量索引服务 - 负责读取文件、生成向量、存储到 PostgreSQL (pgvector)"""
 
     def __init__(self):
         """初始化向量索引服务"""

@@ -54,12 +54,22 @@ logs/
 *.db
 *.sqlite
 
-# Milvus
+# PostgreSQL 数据
 volumes/
+
+# 交付文档（不入库）
+docs/
 
 # Uploads
 uploads/
 *.tmp
+
+# 评测代码与报告（不入库）
+scripts/eval_agent.py
+scripts/eval_retrieval.py
+scripts/eval_report_*.json
+tests/
+nohup.out
 
 # OS
 .DS_Store
