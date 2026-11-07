@@ -140,6 +140,18 @@ class MonitoringConfig(BaseModel):
     prometheus: PrometheusConfig = Field(default_factory=PrometheusConfig)
 
 
+class LokiConfig(BaseModel):
+    url: str = "http://localhost:3100"
+    timeout_seconds: float = 5.0
+    max_range_hours: int = 24
+    max_lines: int = 100
+    max_response_bytes: int = 256 * 1024  # 256 KB
+
+
+class LoggingConfig(BaseModel):
+    loki: LokiConfig = Field(default_factory=LokiConfig)
+
+
 # ============================================================
 # 2. 根配置对象（所见即所得，清晰分层）
 # ============================================================
@@ -151,6 +163,7 @@ class AppConfig(BaseModel):
     rag: RAGConfig = Field(default_factory=RAGConfig)
     mcp_servers: Dict[str, MCPServerItem] = Field(default_factory=dict)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
 def load_config(config_path: str = "config.yaml") -> AppConfig:

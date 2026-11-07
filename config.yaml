@@ -70,3 +70,11 @@ monitoring:
     max_series: ${PROMETHEUS_MAX_SERIES:50}
     max_points_per_series: ${PROMETHEUS_MAX_POINTS:300}
 
+logging:
+  loki:
+    url: ${LOKI_URL:http://localhost:3100}
+    timeout_seconds: ${LOKI_TIMEOUT:5.0}
+    max_range_hours: ${LOKI_MAX_RANGE_HOURS:24}
+    max_lines: ${LOKI_MAX_LINES:100}
+    max_response_bytes: ${LOKI_MAX_RESPONSE_BYTES:262144} # 256KB
+
